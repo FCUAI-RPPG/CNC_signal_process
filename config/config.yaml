@@ -1,8 +1,8 @@
 SPLIT_DATA:
-  DATA_PATHS: "quality-prediction/drive/實驗設計&數據/化新 (Beta site)/實驗數據/20231110 (台中精機場域)/OP2 (KB2-1141)/O6502-20231110125453134"
-  GCODE_PATH: "dataset/ATRANS/精機OP2.csv"  #
-  SR: 11024   #震動訊號sample rate
-  FIGURE_SAVE_PATH: "dataset/ATRANS/精機OP2/"  #存圖的資料夾，最後要有斜線
+  DATA_PATHS: "/data/Projects/quality-prediction/drive/實驗設計數據/化新 (Beta site)/實驗數據/20231110 (台中精機場域)/OP1 (KB2-1139)/*"
+  GCODE_PATH: "/home/huangkaichun/QualityPrediction/化新OP1_Gcode.csv"  # 該訊號的加工 Gcode
+  SR: 11024   #震動訊號 sample rate
+  SAVE_PATH: "/data/Projects/quality-prediction/dataset/ATRANS/測試/"  #存圖的資料夾，最後要有斜線
 
 MODEL:
   NAME: "sequential_angry_fox"
@@ -17,7 +17,7 @@ DATASETS:
   # TRAIN_DATA: "dataset/DOE_6/train_datasetSignal.csv" 
   DATA: "dataset/ATRANS/OR110_8/化新場域/datasetSignal0619.csv" #
   FILE_PATHS: "dataset/ATRANS/OR110_8/化新場域/OP1_110_8/0619/*.pickle"
-  MACHININGERROR_PATH: "dataset/ATRANS/OR110_8/化新場域/machiningerror.csv" #
+  MACHININGERROR_PATH: "CNC_signal_process/doe4/machining_error.csv" #
 
 DATALOADER:
   NUM_WORKERS: 96
