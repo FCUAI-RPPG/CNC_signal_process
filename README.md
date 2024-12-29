@@ -12,21 +12,30 @@ npm install
 
 ### 運行專案
 
-```第一步
-npm run serve
+將 Gcode 轉為 csv 檔
+```
+txt_to_csv.py
 ```
 
-### 開啟專案
+切割訊號
+```
+signal_slit.py
+```
 
-在瀏覽器網址列輸入以下即可看到畫面
+製作訓練用 dataset
+```
+create_dataset.py
+```
 
-```bash
-http://localhost:8080/
+fine tune 模型
+```
+main_manual.py
 ```
 
 ## 環境變數
 
-```存在下面檔案位置內
+存在下面檔案位置內
+```
 config/config.yaml
 ```
 
@@ -43,7 +52,7 @@ config/config.yaml
 - modules - 模組放置處
 - create_dataset.py - 製作dataset
 - main.py - 適合 pretrain 用
-- main_manual.py - 適合訓練用
+- main_manual.py - 適合 fine tune 用
 - signal_slit.py - 訊號自動切割
 - txt_to_csv.py - 將 Gcode 轉為 csv 檔
 ...
