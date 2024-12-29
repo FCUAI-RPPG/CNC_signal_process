@@ -8,5 +8,5 @@ def get_cfg_defaults():
 
 from config import get_cfg_defaults
 cfg = get_cfg_defaults()
-cfg.merge_from_file("Combine_code/config/config.yaml")
+cfg.merge_from_file("CNC_signal_process/config/config.yml")
 cfg.freeze()
