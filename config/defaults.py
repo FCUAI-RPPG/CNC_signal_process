@@ -13,7 +13,7 @@ _C.SPLIT_DATA = CN()
 _C.SPLIT_DATA.DATA_PATHS = ""
 _C.SPLIT_DATA.GCODE_PATH = ""
 _C.SPLIT_DATA.SR = 11024
-_C.SPLIT_DATA.FIGURE_SAVE_PATH = ""
+_C.SPLIT_DATA.SAVE_PATH = ""
 
 # -----------------------------------------------------------------------------
 # MODEL
