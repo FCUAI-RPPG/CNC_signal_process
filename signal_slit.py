@@ -17,21 +17,22 @@ from config import cfg
 
 # 讀取 CSV 檔案 (假設只有一列 "Gcode")
 conbine = 0         #如果切硝訊號檔案不只一個填0，自動做合併
-sr = cfg.DATASETS.SR           #sample rate
-df = pd.read_csv(cfg.DATASETS.GCODE_PATH)  #gcode 位置
+sr = cfg.SPLIT_DATA.SR           #sample rate
+df = pd.read_csv(cfg.SPLIT_DATA.GCODE_PATH)  #gcode 位置
 #訊號資料夾位置
-filepaths = sorted(glob(cfg.DATASETS.DATA_PATHS))
+filepaths = sorted(glob(cfg.SPLIT_DATA.DATA_PATHS))
 if filepaths:
     filepath = filepaths[0]
     filename = os.path.basename(os.path.normpath(filepath))
     
 
-loop_df = pd.DataFrame()
+loop_df = df.copy()
 
-previous_x, previous_z, previous_f, previous_t, previous_RPM, recurrent_stride = 0.0, 0.0, 0.0, 0, 0.0, 0.0
+previous_x, previous_z, previous_f, previous_t,previous_r, previous_RPM, recurrent_stride = 0.0, 0.0, 0.0, 0.0,0, 0.0, 0.0
 max_s, base_rvc, fixed_rvc = 0.0, 0.0, 0.0
 G_type, RPM_type = 0, 0
 start_index = 0
+PreLoopLen = 0
 
 def split_signal(signal):
     window_size = 1000
@@ -64,7 +65,7 @@ def segmentation(signal, lower_threshold ,segment_frame=None, segment_frame_feat
     forward_state = 0
     temp_frame = []
     for i, j in enumerate(segment):
-        if j == 0 & forward_state == 0:
+        if (j == 0) & (forward_state == 0):
             continue
         elif (j != 0) & (forward_state == 0):
             temp_frame.append(i)
@@ -82,34 +83,10 @@ def segmentation(signal, lower_threshold ,segment_frame=None, segment_frame_feat
         feature = np.array([len(temp_frame), signal[segment_frame[-1]].max()])
         segment_frame_feature.append(feature)
         temp_frame = []
-    return segment_frame, segment_frame_feature
-
-def signal_segment(signals, cut_numbers,feed_rate = 11024):
-    signals = abs(signals)
-    
-    # high pass filter
-    # sos = butter(10, 10, 'hp', fs=sr, output='sos')
-    # for i in range(1,3,1):
-    #     signals[i] = sosfilt(sos, signals[i])
-    
-    # signal_square = np.square(signals[2])
-
-    signal_square_average = signals#uniform_filter1d(signal_square, size=int(0.1 * sr), mode='constant', origin=int(((sr*0.1)/2)-1))
-    
-    select_frame = list()
-    
-    reduce_idx = 0
-    for cut_number in zip(cut_numbers):
-        segment_frame, segment_frame_feature = segmentation(signal=signal_square_average, lower_threshold=0.15)
-        segment_frame_feature = np.stack(segment_frame_feature)
-        for idx, feed_rate in zip(np.sort(np.argsort(segment_frame_feature[:, 0])[::-1][:sum(cut_numbers)])[len(select_frame):len(select_frame)+cut_number], [0.12]*cut_number):
-            select_frame.append(segment_frame[idx])
-            reduce_idx += 1
-    
-    return select_frame
+    return segment_frame, segment_frame_feature    
 
 def serch_loop(p,q,U,mode):
-    global previous_x, previous_z,previous_f,previous_RPM,df,loop_df,start_index
+    global previous_x, previous_z,previous_f,previous_RPM,df,loop_df,start_index,PreLoopLen
     U = U*2
     # 尋找 N{p} 和 N{q} 的行索引
     nfirst_index = df[df['Gcode'].str.contains(f'N{p}')].index
@@ -126,19 +103,23 @@ def serch_loop(p,q,U,mode):
         # 儲存 X 和 Z 值的堆疊
         x_values = []
         z_values = []
-
         # 提取 X 和 Z 值
         for line in relevant_lines['Gcode']:
             x_match = re.search(r'X([-+]?\d*\.?\d+)', line)
             z_match = re.search(r'Z([-+]?\d*\.?\d+)', line)
-            
             if x_match:
-                x_values.append(float(x_match.group(1)))
+                if 'N'in line or 'Z' not in line:
+                    x_values.append(float(x_match.group(1)))
             if z_match:
-                z_values.append(float(z_match.group(1)))
+                if 'G1' in line or 'X' not in line:
+                    z_values.append(float(z_match.group(1)))
 
     x_step = len(x_values)-1
     z_step = len(z_values)-1
+    lenz = len(z_values)
+    
+    print(x_values)
+    print(z_values)
 
     x_place = []
     z_place = []
@@ -147,20 +128,42 @@ def serch_loop(p,q,U,mode):
     m = []
 
     while(1):
-        if x_values[x_step] > x_values[0]:
-            if previous_x - U >= x_values[x_step]:
-                x_place.append(previous_x + U)
-                z_place.append(z_values[x_step])
-                x_place.append(previous_x + U)
+        if x_values[-1] > x_values[0]:          #由X值大往小粗切，再由小往大刮一輪
+            if previous_x - U >= x_values[x_step] :
+                x_place.append(previous_x - U)
+                z_place.append(z_values[z_step+1])
+                d_place.append(loop_distance(previous_x - U,z_values[z_step+1],previous_x,previous_z))
+                t_place.append(loop_time_count(d_place[-1],previous_f,previous_RPM))
+                m.append(mode)
+                
+                x_place.append(previous_x - U)
                 z_place.append(z_values[0])
+                d_place.append(None)
+                t_place.append(None)
+                m.append(mode)
+                previous_x = previous_x - U
             else:
                 x_step = x_step-1
+                z_step = z_step-1
+                if x_step < 0:
+                    x_place.append(x_values[0])
+                    z_place.append(z_values[1])
+                    d_place.append(loop_distance(x_values[0],z_values[1],previous_x,previous_z))
+                    t_place.append(loop_time_count(d_place[-1],previous_f,previous_RPM))
+                    m.append(mode)
+                    
+                    x_place.append(x_values[0])
+                    z_place.append(z_values[0])
+                    d_place.append(None)
+                    t_place.append(None)
+                    m.append(mode)
+                    previous_z = z_values[0]
+                    break
         else:
             if previous_x + U <= x_values[x_step]:
-                
                 x_place.append(previous_x + U)
-                z_place.append(z_values[x_step])
-                d_place.append(loop_distance(previous_x + U,z_values[x_step],previous_x,previous_z))
+                z_place.append(z_values[z_step])
+                d_place.append(loop_distance(previous_x + U,z_values[z_step],previous_x,previous_z))
                 t_place.append(loop_time_count(d_place[-1],previous_f,previous_RPM))
                 m.append(mode)
                 
@@ -173,25 +176,31 @@ def serch_loop(p,q,U,mode):
                 previous_x = previous_x + U
             else:
                 x_step = x_step-1
-        if x_step == 0:
-            previous_z = z_values[0]
-            break
-    
+                z_step = z_step-1
+                if x_step < 0:
+                    previous_z = z_values[0]
+                    break
     new_data = pd.DataFrame({
         'X': x_place,
         'Z': z_place,
         'D (mm)': d_place,
-        'Time': t_place,
-        'mode': m
+        'RPM' : None,
+        'F' : None,
+        'mode': m,
+        'Time': t_place
     })
-    loop_df = new_data
+    df_before = loop_df.iloc[:start_index+PreLoopLen ]  # 包含 `N{q}` 行
+    df_after = loop_df.iloc[start_index+PreLoopLen :]   # 從 `N{q}` 行之後的行
+    loop_df = pd.concat([df_before, new_data, df_after], ignore_index=True)
+    PreLoopLen = len(new_data)      #算上輪額外增加幾行
+
 
 def loop_distance(x,z,previous_x,previous_z):
     return round(np.sqrt(((x - previous_x) / 2) ** 2 + (z - previous_z) ** 2)+0.05, 1) 
 
 def loop_time_count(d,f,previous_RPM):
     return round((d/f)/(abs(previous_RPM)/60),4)   
-  
+
 def distance(parsed_data,previous_x,previous_z):
     return round(np.sqrt(((parsed_data['X'] - previous_x) / 2) ** 2 + (parsed_data['Z'] - previous_z) ** 2)+0.05, 1)    
 
@@ -199,7 +208,7 @@ def time_count(parsed_data,previous_RPM):
     return round((parsed_data['D (mm)']/parsed_data['F'])/(abs(parsed_data['RPM'])/60),4)   
                 
 def parse_gcode(gcode):
-    global previous_x, previous_z,previous_f,previous_t,previous_RPM,max_s,base_rvc,fixed_rvc,G_type,RPM_type,recurrent_stride
+    global previous_x, previous_z,previous_f,previous_t,previous_r,previous_RPM,max_s,base_rvc,fixed_rvc,G_type,RPM_type,recurrent_stride
     # 初始化字典來存儲結果
     parsed_data = {'X': None, 'Z': None, 'D (mm)': None, 'RPM': None, 'F':None, 'mode':None, 'Time':None}
             
@@ -217,16 +226,6 @@ def parse_gcode(gcode):
         parsed_data['Z'] = float(z_match.group(1))
     else:
         parsed_data['Z'] = previous_z
-    
-    # # U-X相對座標
-    # u_match = re.search(r'U([+-]?\d+(\.\d+)?)', gcode)
-    # if u_match:
-    #     parsed_data['X'] = previous_x + float(u_match.group(1))
-        
-    # # W-Z相對座標
-    # w_match = re.search(r'W([+-]?\d+(\.\d+)?)', gcode)
-    # if w_match:
-    #     parsed_data['Z'] = previous_z + float(w_match.group(1))
 
     if parsed_data['X'] is not None and parsed_data['Z'] is not None:
         if parsed_data['Z'] == previous_z:
@@ -235,8 +234,6 @@ def parse_gcode(gcode):
         else:
             # 如果Z座標不相等，則使用完整的距離計算公式
             parsed_data['D (mm)'] = distance(parsed_data,previous_x,previous_z)
-        previous_x = parsed_data['X']
-        previous_z = parsed_data['Z']
     
     # 解析進給速度，假設是最後一個數值
     f_match = re.search(r'F([\d\.]+)', gcode)
@@ -247,6 +244,11 @@ def parse_gcode(gcode):
         
         #切消指令
     g_match = re.search(r'G(?!99)([\d\.]+)', gcode)
+    q_match = re.search(r'Q([\d\.]+)', gcode)
+    u_match = re.search(r'U([\d\.]+)', gcode)
+    w_match = re.search(r'W([+-]?\d+(\.\d+)?)', gcode)
+    r_match = re.search(r'R([\d\.]+)', gcode) 
+    s_match = re.search(r'S([\d\.]+)', gcode)
     if g_match:
         g_value = int(g_match.group(1))
         if g_value == 0:        #快速移動
@@ -258,18 +260,17 @@ def parse_gcode(gcode):
         # if g_value == 4:        #停頓或延時指令
         #     G_type = 4
         if g_value == 50:       #最大轉速
-            s_match = re.search(r'S([\d\.]+)', gcode)
             if s_match:
                 max_s = float(s_match.group(1))
         if g_value == 71: 
             G_type = 71
-            u_match = re.search(r'U([\d\.]+)', gcode)
             if u_match :
                 recurrent_stride = float(u_match.group(1))
             p_match = re.search(r'P([\d\.]+)', gcode)
-            q_match = re.search(r'Q([\d\.]+)', gcode)
             if p_match:
                 serch_loop(int(p_match.group(1)),int(q_match.group(1)),recurrent_stride,previous_t)
+        if g_value == 74 and q_match:
+            G_type = 74
         if g_value == 96:       #設定速度，會自動調整   r&vc
             s_match = re.search(r'S([\d\.]+)', gcode)
             if s_match:
@@ -280,6 +281,17 @@ def parse_gcode(gcode):
             if s_match:
                 fixed_rvc = float(s_match.group(1))
             RPM_type = 97
+    if s_match and RPM_type == 97:
+        fixed_rvc = float(s_match.group(1))
+        
+    # U-X相對座標
+    # if u_match and G_type == 1 and G_type != 71:
+    #     parsed_data['X'] = previous_x + float(u_match.group(1))
+    #     print(float(u_match.group(1)))
+    #     exit()
+    # # W-Z相對座標
+    # if w_match and G_type == 1:
+    #     parsed_data['Z'] = previous_z + float(w_match.group(1))
 
     # 匹配T後的數值
     t_match = re.search(r'T([+-]?\d+(\.\d+)?)', gcode)
@@ -290,15 +302,26 @@ def parse_gcode(gcode):
     previous_t = parsed_data['mode']
 
     if parsed_data['X'] is not None and parsed_data['Z'] is not None and base_rvc!=0 and max_s!=0 and parsed_data['X'] !=0 :    #RPM_type = 96
-        parsed_data['RPM'] = round(min((base_rvc * 1000) / (math.pi * parsed_data['X']), max_s), 0)
+        parsed_data['RPM'] = round(min((base_rvc * 1000) / (abs(math.pi * parsed_data['X'])), max_s), 0)
+        # parsed_data['RPM'] = round(min((base_rvc * 1000) / (math.pi * parsed_data['D (mm)']), max_s), 0)
+        
     if RPM_type == 97:      #RPM_type = 97
         parsed_data['RPM'] = fixed_rvc
+    if G_type == 74:
+        parsed_data['D (mm)'] = float(q_match.group(1))/1000 + previous_r
+        parsed_data['Time'] = time_count(parsed_data,previous_RPM)*((abs(previous_z) + abs(parsed_data['Z']))/(float(q_match.group(1))/1000))
+        previous_RPM = parsed_data['RPM']
+        return pd.Series(parsed_data)
     if G_type != 0 and G_type != 4 and parsed_data['X'] is not None and parsed_data['Z'] is not None and previous_RPM!=None:
         parsed_data['Time'] = time_count(parsed_data,previous_RPM)
         if parsed_data['Time'] <=0.003:
             parsed_data['Time'] = None
             
     previous_RPM = parsed_data['RPM']
+    previous_x = parsed_data['X']
+    previous_z = parsed_data['Z']
+    if r_match:
+        previous_r = float(r_match.group(1))
     return pd.Series(parsed_data)
 
 def synchronization(df_accelerometer, df_ServoGuide):
@@ -315,6 +338,51 @@ def synchronization(df_accelerometer, df_ServoGuide):
 
     signals = np.concatenate([df_accelerometer.T.values[:,:crop_length], interpolate_ServoGuide_signal[:,:crop_length]], axis=0)
     return signals
+
+def synchronization_2(df_accelerometer, df_ServoGuide, sr=10240):
+    spindle_signal_square = np.square(df_accelerometer.spindle_front.values)
+
+    N = int(0.1 * sr)
+    spindle_signal_square_average = uniform_filter1d(spindle_signal_square, size=N, mode='constant', origin=511)
+    
+    segment_frame_accelerometer, segment_frame_feature_accelerometer = segmentation(signal=spindle_signal_square_average, lower_threshold=1e-4)
+    segment_frame_feature_accelerometer = np.stack(segment_frame_feature_accelerometer)
+
+    segment_frame_ServoGuide, segment_frame_feature_ServoGuide = segmentation(signal=df_ServoGuide.spindle_rpm.values, lower_threshold=0)
+    
+    segment_frame_feature_ServoGuide = np.stack(segment_frame_feature_ServoGuide)                  
+    
+    start_time_accelerometer = df_accelerometer.time.iloc[segment_frame_accelerometer[np.argmax(segment_frame_feature_accelerometer[:, 0] > sr)][0]]
+    start_time_ServoGuide = df_ServoGuide.time.iloc[segment_frame_ServoGuide[np.argmax(segment_frame_feature_ServoGuide[:, 0] > sr)][0]]
+    delay_time = start_time_accelerometer - start_time_ServoGuide
+    if delay_time < 0:
+        df_accelerometer['time'] = df_accelerometer.time - delay_time
+    else:
+        df_ServoGuide['time'] = df_ServoGuide.time + delay_time
+    
+    interpolate_ServoGuide_signal = list()
+    for signal in df_ServoGuide.T.values[1:]:
+        f = interpolate.interp1d(df_ServoGuide.time.values, signal, kind='nearest', fill_value="extrapolate")
+        interval = 1 / sr
+        xnew = np.arange(df_ServoGuide.time.min(), df_ServoGuide.time.max(), interval)
+        ynew = f(xnew)
+        
+        base_time = max(df_accelerometer.time.min(), df_ServoGuide.time.min())
+        index_shift = np.argmax(df_accelerometer.time >= base_time) - np.argmax(xnew >= base_time)
+        if index_shift < 0:
+            xnew = xnew[abs(index_shift):]
+            ynew = ynew[abs(index_shift):]
+        else:
+            xnew = np.concatenate([df_accelerometer.time[:index_shift], xnew])
+            ynew = np.concatenate([np.array([ynew[0]]*index_shift), ynew])
+        
+        interpolate_ServoGuide_signal.append(ynew)
+    interpolate_ServoGuide_signal = np.stack(interpolate_ServoGuide_signal)
+    
+    crop_length = min(len(df_accelerometer), len(xnew))
+
+    signals = np.concatenate([df_accelerometer.T.values[:,:crop_length], interpolate_ServoGuide_signal[:,:crop_length]], axis=0)
+    return signals
             
 def find_zSpeed_start_place(data,split_place,process_frame,sr,peaks):
     process_frame = int(process_frame)
@@ -322,23 +390,26 @@ def find_zSpeed_start_place(data,split_place,process_frame,sr,peaks):
         if i > split_place+process_frame:   #找到的peak大於上個分割結束點
                 if i-process_frame>=0:
                     # 檢查前面 process_frame 是否都在peak範圍內
-                    if np.max(data[i-process_frame:i]) <= data[i] and np.max(data[i-process_frame+int(sr/10):i-process_frame+sr])<= data[i]/2:   #化新OP2 sr/5 other sr/10
+                    if np.max(data[i-process_frame:i]) <= data[i] and np.max(data[i-process_frame+int(sr/10):i-process_frame+sr])<= data[i]:   #化新OP2 sr/5 other sr/10
                         return i-process_frame
 
 # 使用 apply 對每一行的 Gcode 進行解析並新增對應的列
+df.iloc[:,0] = df.iloc[:,0].fillna('').astype(str)
 df[['X', 'Z', 'D (mm)','RPM','F','mode','Time']] = df.iloc[:,0].apply(parse_gcode)
-if not loop_df.empty :
-    df_before = df.iloc[:start_index ]  # 包含 `N{q}` 行
-    df_after = df.iloc[start_index :]   # 從 `N{q}` 行之後的行
-    df = pd.concat([df_before, loop_df, df_after], ignore_index=True)
-    print('HAVE LOOP!!!')
-# print(df)
+
+if len(loop_df) != len(df):
+    for row in range(len(loop_df)):
+        for row2 in range(len(df)):
+            if loop_df.iloc[row,0] == df.iloc[row2,0]:
+                loop_df.iloc[row,1:8] = df.iloc[row2,1:8]
+                break
+    df = loop_df
 # df.to_csv('parsed_output.csv')
 
 bar = tqdm(filepaths, total=len(filepaths))
 wrong_data = []
 for filepath in bar:
-    # try:
+    try:
         print(filepath)
         filename = os.path.basename(filepath)
         print(filename)
@@ -397,12 +468,6 @@ for filepath in bar:
             df_ServoGuide = df_ServoGuide[['time', 'spindle_rpm', 'motor_x_rpm', 'motor_z_rpm', 'spindle_current', 'motor_x_current', 'motor_z_current']]   #motor_x_rpm=x-speed    motor_z_rpm=z-speed 
 
         signals = synchronization(df_accelerometer, df_ServoGuide)
-        
-        #存signal
-        signals_list = []
-        # with open('/data/Projects/quality-prediction/dataset/振鋒場域/{}/原始訊號/{}.pickle'.format(folder,filename),'wb') as file:
-        #     signals_list.append(signals)
-        #     pickle.dump(signals_list, file)
 
         z_speed = np.array(signals[5,:])
         x_speed = np.array(signals[4,:])
@@ -414,14 +479,6 @@ for filepath in bar:
         motor_x_current = np.array(signals[7,:])
         motor_z_current = np.array(signals[8,:])
 
-        spindle_front_MM = np.abs(spindle_front)
-        scaler = MinMaxScaler(feature_range=(0, 1)).fit(spindle_front_MM.reshape(-1, 1))
-        spindle_front_MM = scaler.transform(spindle_front_MM.reshape(-1, 1))
-    
-
-        turret =np.abs(turret)
-        scaler = MinMaxScaler(feature_range=(0, 1)).fit(turret.reshape(-1, 1))
-        turret = scaler.transform(turret.reshape(-1, 1))
         z_speed_MM = np.abs(z_speed)
         scaler = MinMaxScaler(feature_range=(0, 1)).fit(z_speed_MM.reshape(-1, 1))
         z_speed_MM = scaler.transform(z_speed_MM.reshape(-1, 1))
@@ -429,13 +486,6 @@ for filepath in bar:
         scaler = MinMaxScaler(feature_range=(0, 1)).fit(x_speed_MM.reshape(-1, 1))
         x_speed_MM = scaler.transform(x_speed_MM.reshape(-1, 1))
 
-        spindle_rpm_diff = np.abs(np.diff(spindle_rpm, prepend=0))
-        scaler = MinMaxScaler(feature_range=(0, 1)).fit(spindle_rpm_diff.reshape(-1, 1))
-        spindle_rpm_diff = scaler.transform(spindle_rpm_diff.reshape(-1, 1))
-
-        spindle_current = np.abs(spindle_current)
-        scaler = MinMaxScaler(feature_range=(0, 1)).fit(spindle_current.reshape(-1, 1))
-        spindle_current = scaler.transform(spindle_current.reshape(-1, 1))
         motor_x_current_MM = np.abs(motor_x_current)
         scaler = MinMaxScaler(feature_range=(0, 1)).fit(motor_x_current_MM.reshape(-1, 1))
         motor_x_current_MM = scaler.transform(motor_x_current_MM.reshape(-1, 1))
@@ -462,33 +512,53 @@ for filepath in bar:
         time_sums_array = time_sums.values
 
         mode = mode.values
-
-        # time_sums_array[0] = 4
+            
+        unique_modes = sorted(set(mode))  # 獲得唯一 mode 並排序
+        mode_to_N_map = {mode_val: f"N{idx + 1}" for idx, mode_val in enumerate(unique_modes)}
+        # 初始化儲存結構
+        signal_save = {f"N{idx + 1}": [] for idx in range(len(unique_modes))}
 
         start_array = []
         end_array = []
         mode_split_num = 0
-        split_num = 0
-        signal_N0_save = []
-        signal_N1_save = []
-        signal_N2_save = []
-        signal_N3_save = []
-        signal_N4_save = []
+
         minmax_data = minmax_data.ravel()   #攤平
         peaks, _ = find_peaks(minmax_data)
 
-        for mode_num in range(len(mode)):             #找出每個mode的起迄點
+        # 遍歷每個 mode 並進行處理
+        for mode_num in range(len(mode)):  # 找出每個 mode 的起迄點
             print(mode[mode_num])
             if mode_num == 0:
                 split_place = 0
             else:
-                split_place = end_array[mode_num-1]
-            process_frame = int(sr*time_sums_array[mode_num])
-            start_array.append(find_zSpeed_start_place(data=minmax_data,split_place = split_place,process_frame = process_frame,sr = sr,peaks = peaks))    #op1 frame_length 10000 、threshold 30
-            if start_array[mode_num]==None:
+                split_place = end_array[mode_num - 1]
+            
+            process_frame = int(sr * time_sums_array[mode_num])
+            start = find_zSpeed_start_place(data=minmax_data, split_place=split_place, process_frame=process_frame, sr=sr, peaks=peaks)
+            
+            if start is None:
                 break
-            end_array.append(int(start_array[mode_num]+process_frame))
+            
+            start_array.append(start)
+            end_array.append(int(start + process_frame))
+
+            # 動態保存數據到 N1, N2, N3, N4
+            mode_key = mode_to_N_map[mode[mode_num]]  # 將 mode 值映射到對應的 N
+            if mode_key in signal_save:
+                signal_save[mode_key].append(signals[:, start:end_array[mode_num]])
+            
             mode_split_num += 1
+
+
+        # 動態存檔
+        for key, signal_data in signal_save.items():
+            # 確保檔案夾存在
+            save_path = f'{cfg.SPLIT_DATA.SAVE_PATH}/{key}'
+            os.makedirs(save_path, exist_ok=True)
+            
+            # 存檔
+            with open(f'{save_path}/{filename}.pickle', 'wb') as file:
+                pickle.dump(signal_data, file)
 
         
         print(start_array)
@@ -541,12 +611,11 @@ for filepath in bar:
 
         # 保存圖像
         plt.tight_layout()
-        # plt.savefig('/data/Projects/quality-prediction/dataset/振鋒場域/{}/切割訊號圖/{}.png'.format(folder,filename))
-        # plt.savefig('/data/Projects/quality-prediction/dataset/ATRANS/客戶場域數據/OP2 (KB2-1141)/{}/切割訊號圖/{}.png'.format(folder,filename))
-        plt.savefig(cfg.DATASETS.FIGURE_SAVE_PATH + filename + '.png')
+        save_path = f'{cfg.SPLIT_DATA.SAVE_PATH}/切割訊號圖/'
+        os.makedirs(save_path, exist_ok=True)
+        plt.savefig(save_path + filename + '.png')
         plt.close()
-        exit()
-        
-    # except Exception as e:
-    #     wrong_data.append(filename)
-    #     continue
+
+    except Exception as e:
+        wrong_data.append(filename)
+        continue
