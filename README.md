@@ -38,3 +38,5 @@ main_manual.py
 ```
 config/config.yaml
 ```
+
+## 操作細項
