@@ -390,7 +390,7 @@ def find_zSpeed_start_place(data,split_place,process_frame,sr,peaks):
         if i > split_place+process_frame:   #找到的peak大於上個分割結束點
                 if i-process_frame>=0:
                     # 檢查前面 process_frame 是否都在peak範圍內
-                    if np.max(data[i-process_frame:i]) <= data[i] and np.max(data[i-process_frame+int(sr/10):i-process_frame+sr])<= data[i]:   #化新OP2 sr/5 other sr/10
+                    if np.max(data[i-process_frame:i]) <= data[i] and np.max(data[i-process_frame+int(sr/10):i-process_frame+sr])<= data[i]:   
                         return i-process_frame
 
 # 使用 apply 對每一行的 Gcode 進行解析並新增對應的列
@@ -450,7 +450,7 @@ for filepath in bar:
                 df_accelerometer = pd.concat([df_accelerometer, accelerometer],  axis=0)
                 df_ServoGuide = pd.concat([df_ServoGuide, ServoGuide],  axis=0)
                 
-            df_ServoGuide = df_ServoGuide[['time', 'spindle_rpm', 'motor_x_rpm', 'motor_z_rpm', 'spindle_current', 'motor_x_current', 'motor_z_current','S-TCDM']]
+            df_ServoGuide = df_ServoGuide[['time', 'spindle_rpm', 'motor_x_rpm', 'motor_z_rpm', 'spindle_current', 'motor_x_current', 'motor_z_current','S-TCDM']]  #可以根據輸入訊號增減更改
         else:
             df_accelerometer = pd.read_csv(
                 glob(f"{filepath}/Acc*-1.csv")[0],
@@ -465,9 +465,9 @@ for filepath in bar:
                 skiprows=[0],
                 low_memory=False,
             )
-            df_ServoGuide = df_ServoGuide[['time', 'spindle_rpm', 'motor_x_rpm', 'motor_z_rpm', 'spindle_current', 'motor_x_current', 'motor_z_current']]   #motor_x_rpm=x-speed    motor_z_rpm=z-speed 
+            df_ServoGuide = df_ServoGuide[['time', 'spindle_rpm', 'motor_x_rpm', 'motor_z_rpm', 'spindle_current', 'motor_x_current', 'motor_z_current']]   #可以根據輸入訊號增減更改
 
-        signals = synchronization(df_accelerometer, df_ServoGuide)
+        signals = synchronization(df_accelerometer, df_ServoGuide)  # synchronization_2 用來對其震訊號開頭不一致的 data 
 
         z_speed = np.array(signals[5,:])
         x_speed = np.array(signals[4,:])
