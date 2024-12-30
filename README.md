@@ -1,4 +1,4 @@
-### 取得專案
+## 取得專案
 
 ```bash
 git clone git@github.com:FCUAI-RPPG/CNC_signal_process.git
