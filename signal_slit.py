@@ -423,7 +423,7 @@ for filepath in bar:
                 # 讀取加速計資料
                 accelerometer = pd.read_csv(
                     glob(f"{filepath}/Acc*-{num + 1}.csv")[0],
-                    names=['time', 'spindle_front', 'turret'],
+                    names=['time', 'spindle_front', 'turret'],  #可以根據輸入訊號增減更改
                     skiprows=[0],
                     low_memory=False,
                     index_col=None
@@ -432,7 +432,7 @@ for filepath in bar:
                 # 讀取 ServoGuide 資料
                 ServoGuide = pd.read_csv(
                     glob(f"{filepath}/Servo*-{num + 1}.csv")[0],
-                    names=['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current','S-TCDM'],
+                    names=['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current','S-TCDM'],  #可以根據輸入訊號增減更改
                     skiprows=[0],
                     low_memory=False,
                     index_col=None
@@ -454,14 +454,14 @@ for filepath in bar:
         else:
             df_accelerometer = pd.read_csv(
                 glob(f"{filepath}/Acc*-1.csv")[0],
-                names=['time', 'spindle_front', 'turret'],
-                skiprows=[0],
+                names=['time', 'spindle_front', 'turret'],  #可以根據輸入訊號增減更改
+                skiprows=[0],   
                 low_memory=False
             )
 
             df_ServoGuide = pd.read_csv(
                 glob(f"{filepath}/Servo*-1.csv")[0],
-                names=['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current'],
+                names=['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current'],   #可以根據輸入訊號增減更改
                 skiprows=[0],
                 low_memory=False,
             )
