@@ -39,14 +39,14 @@ main_manual.py
 config/config.yml
 ```
 
-## 操作細項
+## 操作說明
 
 使用 txt_to_csv.py 的話要到檔案內改 input_file 和 output_file 位置
 
 使用 signal_slit.py 需要設置 config 檔內的 SPLIT_DATA 相關參數路徑，會輸出切割訊號 pickle 檔與圖片
 預設輸入的震動訊號檔案為 ['time', 'spindle_front', 'turret']
 預設輸入的 servo 訊號檔案為 ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current']
-若不同可到 signal_slit.py 程式碼內讀取位置進行修改 (470 行)
+若不同可到 signal_slit.py 程式碼內讀取位置進行修改 (大概第470 行)
 
 使用 create_dataset.py 需要設置 config 檔內的 DATASETS 相關參數路徑，會輸出訓練用資料集 pickle 檔
 
