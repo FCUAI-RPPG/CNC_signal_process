@@ -36,7 +36,7 @@ main_manual.py
 
 存在下面檔案內(可改參數)
 ```
-config/config.yaml
+config/config.yml
 ```
 
 ## 操作細項
