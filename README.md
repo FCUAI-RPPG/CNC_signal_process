@@ -40,3 +40,11 @@ config/config.yaml
 ```
 
 ## 操作細項
+
+使用 txt_to_csv.py 的話要到檔案內改 input_file 和 output_file 位置
+
+使用 signal_slit.py 需要設置 config 檔內的 SPLIT_DATA 相關參數路徑
+
+使用 create_dataset.py 需要設置 config 檔內的 DATASETS 相關參數路徑
+
+使用 main_manual.py 需要設置 config 檔內的 MODEL、DATALOADER、SOLVER、TEST、OUTPUT_DIR 相關參數路徑
