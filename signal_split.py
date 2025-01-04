@@ -18,7 +18,7 @@ from config import cfg
 # 讀取 CSV 檔案 (假設只有一列 "Gcode")
 conbine = 0         #如果切硝訊號檔案不只一個填0，自動做合併
 sr = cfg.SPLIT_DATA.SR           #sample rate
-df = pd.read_csv(cfg.SPLIT_DATA.GCODE_PATH)  #gcode 位置
+df = pd.read_csv(cfg.SPLIT_DATA.GCODE_PATH, on_bad_lines='skip')  #gcode 位置
 #訊號資料夾位置
 filepaths = sorted(glob(cfg.SPLIT_DATA.DATA_PATHS))
 if filepaths:
