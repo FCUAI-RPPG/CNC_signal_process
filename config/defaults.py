@@ -35,6 +35,7 @@ _C.MODEL.DROPOUT_RATE = 0.5
 _C.DATASETS = CN()
 _C.DATASETS.DATA = ''
 _C.DATASETS.FILE_PATHS = ''
+_C.DATASETS.TRAIN_DATA = ''
 _C.DATASETS.MACHININGERROR_PATH = ''
 
 # -----------------------------------------------------------------------------
