@@ -389,9 +389,10 @@ def find_zSpeed_start_place(data,split_place,process_frame,sr,peaks):
     for i in peaks:
         if i > split_place+process_frame:   #找到的peak大於上個分割結束點
                 if i-process_frame>=0:
-                    # 檢查前面 process_frame 是否都在peak範圍內
-                    if np.max(data[i-process_frame:i]) <= data[i] and np.max(data[i-process_frame+int(sr/10):i-process_frame+sr])<= data[i]:   
-                        return i-process_frame
+                    count_exceed = np.sum(data[i - process_frame:i] > 0.5 * data[i])
+                    # 檢查條件
+                    if np.max(data[i - process_frame:i]) <= data[i] and count_exceed <= int(process_frame/20):
+                        return i - process_frame
 
 # 使用 apply 對每一行的 Gcode 進行解析並新增對應的列
 df.iloc[:,0] = df.iloc[:,0].fillna('').astype(str)
