@@ -99,8 +99,8 @@ class MachiningErrorGenerator(tf.keras.utils.Sequence):
         self.training = training
         self.batch_size = batch_size
         self.sequence_length = sequence_length // 2
-        norm_mean = np.load(cfg.DATASETS.NORM_MEAN)[1][[0,2,4,5,6,7,8,9]]
-        norm_std = np.load(cfg.DATASETS.NORM_STD)[1][[0,2,4,5,6,7,8,9]] #內0,1,2,3,4,5,6,7 外0,2,4,5,6,7,8,9
+        norm_mean = np.load(cfg.DATALOADER.NORM_MEAN)[1][[0,2,4,5,6,7,8,9]]
+        norm_std = np.load(cfg.DATALOADER.NORM_STD)[1][[0,2,4,5,6,7,8,9]] #內0,1,2,3,4,5,6,7 外0,2,4,5,6,7,8,9
         self.signals_dict, self.sampling_index = sampling_signal(
             data=data,
             norm_mean=norm_mean,
