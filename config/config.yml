@@ -6,7 +6,7 @@ SPLIT_DATA:
 
 MODEL:
   NAME: "sequential_angry_fox"  #選則 model 
-  PRETRAINED_PATH: "dataset/ATRANS/OR110_8/checkpoint.h5" #model存放位置
+  PRETRAINED_PATH: "CNC_signal_process/doe4/checkpoint/checkpoint.h5" #model存放位置
   FILTERS: 24
   NUM_LAYERS: 2
   LORA: True
