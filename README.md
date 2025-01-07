@@ -47,6 +47,7 @@ config/config.yml
 預設輸入的震動訊號檔案為 ['time', 'spindle_front', 'turret']
 預設輸入的 servo 訊號檔案為 ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current']
 若不同可到 signal_slit.py 程式碼內讀取位置進行修改 (大概第470 行)
+
 !! 目前版本無法對參數化的Gcode作分析 !!
 
 使用 create_dataset.py 需要設置 config 檔內的 DATASETS 相關參數路徑，會輸出訓練用資料集 pickle 檔
