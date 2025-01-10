@@ -1,4 +1,4 @@
-##安裝python
+## 安裝python
 
 可以參考此網頁
 https://hackmd.io/@smallshawn95/vscode_write_py
