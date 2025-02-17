@@ -77,23 +77,32 @@ config/config.yml
 2. 執行程式後，在命令列輸入目標尺寸（單位：mm）。
 
 
-【2】 使用 signal_slit.py
-需要在 config 檔內設定 SPLIT_DATA 相關參數路徑：
-DATA_PATHS：工件訊號
-GCODE_PATH：Gcode 檔
-SR: 11024   震動訊號 sample rate
-SAVE_PATH：儲存切割後的訊號與圖片
-COMBINE: 檔案有被分開存放時時調成true default 為 false
+## 2. 使用 `signal_slit.py`
+**功能**：  
+根據 G-code 分割工件的震動與伺服訊號，並輸出對應的圖片與 pickle 檔案。
 
-最終會輸出：
-切割後的訊號 pickle 檔
-對應的圖片
-預設輸入訊號檔案：
-震動訊號：['time', 'spindle_front', 'turret']
-servo 訊號：['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current']
-【注意】若實際使用的訊號欄位不同，可至 signal_slit.py 中（大約第 470 行）修改讀取位置。
+### 使用方法：
+1. 在 `config` 檔案內設定 `SPLIT_DATA` 相關參數：
+   - `DATA_PATHS`：工件訊號存放位置
+   - `GCODE_PATH`：G-code 檔案存放位置
+   - `SR`：震動訊號的採樣率 (預設 `11024`)
+   - `SAVE_PATH`：儲存切割後訊號與圖片的資料夾
+   - `COMBINE`：如果訊號檔案被分開存放，請設為 `True`（預設 `False`）
+2. 執行程式後，輸出：
+   - 切割後的訊號 (`pickle` 檔)
+   - 對應的圖片
 
-!! 目前版本無法對參數化的 Gcode 進行分析 !!
+### 預設輸入訊號欄位：
+- **震動訊號**：
+  ```python
+  ['time', 'spindle_front', 'turret']
+- **servo 訊號**：
+  ```python
+  ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current']
+⚠ **注意**：
+- 若實際使用的訊號欄位不同，請修改 `signal_slit.py`（約第 **470** 行）。
+- 目前版本**無法分析參數化的 G-code**。
+
 
 
 【3】 使用 create_dataset.py
