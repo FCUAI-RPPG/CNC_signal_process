@@ -101,7 +101,6 @@ config/config.yml
   ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current']
 ⚠ **注意**：
 - 若實際使用的訊號欄位不同，請修改 `signal_slit.py`（約第 **470** 行）。
-- 目前版本**無法分析參數化的 G-code**。
 
 
 ## 3. 使用 `create_dataset.py`
@@ -113,29 +112,48 @@ config/config.yml
    - `DATA`：資料集存放位置
    - `FILE_PATHS`：切割訊號存放位置
    - `MACHININGERROR_PATH`：加工誤差 CSV 檔案
+
 ⚠ **注意**：
-- 目前 servo 檔案必須包含以下欄位： ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torque']
+- 目前 servo 檔案必須包含以下欄位：
+  ```python
+  ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torque']
 
 
-【4】 使用 main_manual.py
-需要在 config 檔內設定下列相關參數路徑：
-參閱 PPT 中的參數配置說明，其中詳列了可能需要調整的參數或路徑
-MODEL
-DATALOADER
-SOLVER
-TEST
-OUTPUT_DIR
-【重要】在跑模型前，請先將 dataset 資料集切分為訓練集與測試集，並分別放入：
-訓練資料：DATASETS 下的 TRAIN_DATA 
-測試資料：TEST 下的 EVALUATE_DATA 
 
-【注意】目前提供的 model 與 machining_error.csv 僅支援 DOE4 與 DOE6
+## 4. 使用 `main_manual.py`
+**功能**：  
+執行機器學習模型，根據設定的資料集進行訓練與測試。
 
+### 使用方法：
+1. 在 `config` 檔案內設定以下參數：
+   - `MODEL`：模型參數
+   - `DATALOADER`：資料加載器設定
+   - `SOLVER`：訓練參數
+   - `TEST`：測試相關設定
+   - `OUTPUT_DIR`：輸出結果的存放路徑
+2. 在執行模型前，請先將資料集**切分為訓練集與測試集**，並分別存放於：
+   - 訓練資料夾：
+     ```
+     DATASETS/TRAIN_DATA
+     ```
+   - 測試資料夾：
+     ```
+     TEST/EVALUATE_DATA
+     ```
 
-【5】 使用 DOE4_file_sorted.py
-修改 DOE4 檔案儲存方式與名稱，使 signal_slit.py 能正常運作
-需要在 config 檔內設定下列相關參數路徑：
-SERVO_GUIDE_DIR: DOE4 ServoGuide 存放位置資料夾
-ACC_DIR: DOE4 震動資料存放位置資料夾
-DEST_ROOT: 整理並合併後資料夾存放位置
-USE_DOE4: 是否使用 DOE4 訊號，是的話為 True 
+⚠ **注意**：
+- 目前提供的 `model` 與 `machining_error.csv` **僅支援** `DOE4` 和 `DOE6`。
+
+---
+
+## 5. 使用 `DOE4_file_sorted.py`
+**功能**：  
+調整 `DOE4` 檔案的儲存方式與命名，使 `signal_slit.py` 能夠正常運作。
+
+### 使用方法：
+1. 在 `config` 檔案內設定以下參數：
+   - `SERVO_GUIDE_DIR`：DOE4 伺服訊號 (`ServoGuide`) 存放資料夾
+   - `ACC_DIR`：DOE4 震動訊號存放資料夾
+   - `DEST_ROOT`：整理並合併後的資料夾存放位置
+   - `USE_DOE4`：是否使用 DOE4 訊號，若使用請設為 `True`
+
