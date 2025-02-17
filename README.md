@@ -98,7 +98,7 @@ config/config.yml
   ['time', 'spindle_front', 'turret']
 - **servo 訊號**：
   ```python
-  ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current']
+  ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torque']
 ⚠ **注意**：
 - 若實際使用的訊號欄位不同，請修改 `signal_slit.py`（約第 **470** 行）。
 
