@@ -104,15 +104,17 @@ config/config.yml
 - 目前版本**無法分析參數化的 G-code**。
 
 
-
-【3】 使用 create_dataset.py
-需要在 config 檔內設定 DATASETS 相關參數路徑：
-DATA：資料集
-FILE_PATHS：切割訊號
-MACHININGERROR_PATH：加工誤差 CSV 檔案
+## 3. 使用 `create_dataset.py`
+**功能**：  
 執行後會輸出用於訓練的資料集。
 
-【注意】目前 servo 檔案必須包含以下欄位： ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torque']
+### 使用方法：
+1. 在 `config` 檔案內設定 `DATASETS` 相關參數：
+   - `DATA`：資料集存放位置
+   - `FILE_PATHS`：切割訊號存放位置
+   - `MACHININGERROR_PATH`：加工誤差 CSV 檔案
+⚠ **注意**：
+- 目前 servo 檔案必須包含以下欄位： ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torque']
 
 
 【4】 使用 main_manual.py
