@@ -64,12 +64,17 @@ python DOE4_file_sorted.py
 config/config.yml
 ```
 
-## 操作說明
-【1】 使用 txt_to_csv_targetsize.py
-需要在 config 檔內設定 SPLIT_DATA 相關參數路徑：
-TXT_PATH：放置 gcode 的 txt 檔案
-GCODE_PATH：放置轉換好的 gcode.csv
-此版本新增讀取 targetsize 功能，只需在程式執行後於命令列內輸入目標尺寸即可(單位mm)
+# 操作說明
+
+## 1. 使用 `txt_to_csv_targetsize.py`
+**功能**：  
+將 G-code 的 TXT 檔案轉換為 CSV 格式，並新增讀取目標尺寸 (target size) 的功能。
+
+### 使用方法：
+1. 在 `config` 檔案內設定 `SPLIT_DATA` 相關參數：
+   - `TXT_PATH`：G-code 的 TXT 檔案存放位置
+   - `GCODE_PATH`：轉換後的 G-code CSV 檔案存放位置
+2. 執行程式後，在命令列輸入目標尺寸（單位：mm）。
 
 
 【2】 使用 signal_slit.py
