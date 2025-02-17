@@ -52,25 +52,33 @@ fine tune 模型
 python main_manual.py
 ```
 
+整理 DOE4 資料並合併成 signal_split 可讀取名稱
+```
+python DOE4_file_sorted.py
+```
+
 ## 環境變數
 
-存在下面檔案內(可改參數)
+存在下面檔案內(可改參數)，請盡量不要包含中文路徑以免報錯
 ```
 config/config.yml
 ```
 
 ## 操作說明
-【1】 使用 txt_to_csv.py
+【1】 使用 txt_to_csv_targetsize.py
 需要在 config 檔內設定 SPLIT_DATA 相關參數路徑：
 TXT_PATH：放置 gcode 的 txt 檔案
 GCODE_PATH：放置轉換好的 gcode.csv
+此版本新增讀取 targetsize 功能，只需在程式執行後於命令列內輸入目標尺寸即可(單位mm)
 
 
 【2】 使用 signal_slit.py
 需要在 config 檔內設定 SPLIT_DATA 相關參數路徑：
 DATA_PATHS：工件訊號
 GCODE_PATH：Gcode 檔
+SR: 11024   震動訊號 sample rate
 SAVE_PATH：儲存切割後的訊號與圖片
+COMBINE: 檔案有被分開存放時時調成true default 為 false
 
 最終會輸出：
 切割後的訊號 pickle 檔
@@ -90,7 +98,7 @@ FILE_PATHS：切割訊號
 MACHININGERROR_PATH：加工誤差 CSV 檔案
 執行後會輸出用於訓練的資料集。
 
-【注意】目前 servo 檔案必須包含以下欄位： ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torgue']
+【注意】目前 servo 檔案必須包含以下欄位： ['time', 'motor_x_rpm', 'motor_x_current', 'motor_z_rpm', 'motor_z_current', 'spindle_rpm', 'spindle_current', 'torque']
 
 
 【4】 使用 main_manual.py
@@ -106,3 +114,12 @@ OUTPUT_DIR
 測試資料：TEST 下的 EVALUATE_DATA 
 
 【注意】目前提供的 model 與 machining_error.csv 僅支援 DOE4 與 DOE6
+
+
+【5】 使用 DOE4_file_sorted.py
+修改 DOE4 檔案儲存方式與名稱，使 signal_slit.py 能正常運作
+需要在 config 檔內設定下列相關參數路徑：
+SERVO_GUIDE_DIR: DOE4 ServoGuide 存放位置資料夾
+ACC_DIR: DOE4 震動資料存放位置資料夾
+DEST_ROOT: 整理並合併後資料夾存放位置
+USE_DOE4: 是否使用 DOE4 訊號，是的話為 True 
